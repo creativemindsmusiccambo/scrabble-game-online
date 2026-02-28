@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrabble Online - Multiplayer | By ESL Teacher Ry</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .game-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 20px;
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: linear-gradient(45deg, #f4d03f, #f39c12);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #a0a0a0;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .creator-credit {
+            text-align: center;
+            color: #f4d03f;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+            font-style: italic;
+            letter-spacing: 1px;
+        }
+        
+        .creator-credit::before {
+            content: "✨ ";
+        }
+        
+        .creator-credit::after {
+            content: " ✨";
+        }
+        
+        .menu-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .menu-content {
+            background: rgba(255,255,255,0.05);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .menu-content h2 {
+            color: #f4d03f;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+        
+        .menu-content p {
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .menu-creator {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(244,208,63,0.3);
+            color: #f4d03f;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #f4d03f;
+            font-weight: 500;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1rem;
+            text-align: center;
+        }
+        
+        .input-group input::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #f39c12, #f4d03f);
+            border: none;
+            padding: 14px 28px;
+            border-radius: 25px;
+            color: #1a1a2e;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            margin: 5px;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(243,156,18,0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: #fff;
+        }
+        
+        .room-code {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #f4d03f;
+            letter-spacing: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .players-waiting {
+            margin: 20px 0;
+        }
+        
+        .waiting-player {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .waiting-player.player-1 { border-left-color: #e74c3c; }
+        .waiting-player.player-2 { border-left-color: #3498db; }
+        .waiting-player.player-3 { border-left-color: #2ecc71; }
+        .waiting-player.player-4 { border-left-color: #9b59b6; }
+        
+        .waiting-player.you {
+            background: rgba(244,208,63,0.2);
+        }
+        
+        .left-panel, .right-panel {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .panel-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #f4d03f;
+            border-bottom: 2px solid rgba(244,208,63,0.3);
+            padding-bottom: 10px;
+        }
+        
+        .player-card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .player-card.active {
+            background: rgba(244,208,63,0.15);
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(244,208,63,0.2);
+        }
+        
+        .player-card.player-1 { border-left-color: #e74c3c; }
+        .player-card.player-2 { border-left-color: #3498db; }
+        .player-card.player-3 { border-left-color: #2ecc71; }
+        .player-card.player-4 { border-left-color: #9b59b6; }
+        
+        .player-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .player-status {
+            font-size: 0.8rem;
+            color: #2ecc71;
+        }
+        
+        .player-status.offline {
+            color: #e74c3c;
+        }
+        
+        .player-score {
+            font-size: 1.5rem;
+            color: #f4d03f;
+            font-weight: 700;
+        }
+        
+        .tile-count {
+            text-align: center;
+            margin-top: 10px;
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+        
+        .center-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .board-container {
+            position: relative;
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(15, 40px);
+            grid-template-rows: repeat(15, 40px);
+            gap: 2px;
+            background: #34495e;
+            padding: 2px;
+            border-radius: 5px;
+        }
+        
+        .cell {
+            width: 40px;
+            height: 40px;
+            background: #d4a574;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        
+        .cell:hover:not(.disabled) {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        
+        .cell.disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+        
+        .cell.center {
+            background: #f39c12;
+        }
+        
+        .cell.tw {
+            background: #e74c3c;
+            color: #fff;
+        }
+        
+        .cell.dw {
+            background: #ffb6c1;
+            color: #c0392b;
+        }
+        
+        .cell.tl {
+            background: #2980b9;
+            color: #fff;
+        }
+        
+        .cell.dl {
+            background: #87ceeb;
+            color: #2980b9;
+        }
+        
+        .cell .tile {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f4d03f 0%, #f39c12 100%);
+            border-radius: 3px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #2c3e50;
+            font-weight: 700;
+            font-size: 1.2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            cursor: grab;
+            position: relative;
+        }
+        
+        .cell .tile.placed-this-turn {
+            box-shadow: 0 0 0 3px #2ecc71;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 3px #2ecc71; }
+            50% { box-shadow: 0 0 0 5px #2ecc71; }
+        }
+        
+        .rack-container {
+            margin-top: 30px;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .rack-label {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            color: #f4d03f;
+        }
+        
+        .rack {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            min-height: 60px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .rack.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .rack-tile {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #f4d03f 0%, #f39c12 100%);
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #2c3e50;
+            font-weight: 700;
+            font-size: 1.5rem;
+            cursor: grab;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+            position: relative;
+            user-select: none;
+        }
+        
+        .rack-tile:hover:not(.disabled) {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+        
+        .rack-tile.selected {
+            box-shadow: 0 0 0 4px #2ecc71;
+            transform: translateY(-5px);
+        }
+        
+        .rack-tile.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .rack-tile .points {
+            font-size: 0.7rem;
+            position: absolute;
+            bottom: 3px;
+            right: 5px;
+        }
+        
+        .rack-tile.blank {
+            background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+        }
+        
+        .turn-info {
+            background: rgba(244,208,63,0.1);
+            border: 1px solid rgba(244,208,63,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .current-player {
+            font-size: 1.3rem;
+            color: #f4d03f;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .last-score {
+            font-size: 1rem;
+            color: #a0a0a0;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .word-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        .word-entry {
+            padding: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .word-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .legend {
+            margin-top: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            z-index: 999;
+            transition: all 0.3s;
+        }
+        
+        .connection-status.connected {
+            background: #2ecc71;
+            color: #fff;
+        }
+        
+        .connection-status.disconnected {
+            background: #e74c3c;
+            color: #fff;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .chat-container {
+            margin-top: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 10px;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .chat-message {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .chat-message .player {
+            font-weight: 700;
+            color: #f4d03f;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        
+        .chat-input button {
+            padding: 8px 15px;
+            font-size: 0.8rem;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #2c3e50;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .modal-content h2 {
+            color: #f4d03f;
+            margin-bottom: 20px;
+        }
+        
+        .blank-options {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .blank-option {
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid transparent;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        
+        .blank-option:hover {
+            background: rgba(244,208,63,0.2);
+            border-color: #f4d03f;
+        }
+        
+        .game-over {
+            text-align: center;
+        }
+        
+        .winner {
+            font-size: 2rem;
+            color: #f4d03f;
+            margin: 20px 0;
+        }
+        
+        .final-scores {
+            margin: 20px 0;
+        }
+        
+        .final-score-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .footer-credit {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(244,208,63,0.7);
+            font-size: 0.8rem;
+            font-style: italic;
+            z-index: 100;
+        }
+        
+        .message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 15px 25px;
+            background: #2ecc71;
+            color: #fff;
+            border-radius: 10px;
+            font-weight: 700;
+            transition: transform 0.3s ease;
+            z-index: 1002;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .message.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .message.error {
+            background: #e74c3c;
+        }
+        
+        @media (max-width: 1200px) {
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .left-panel, .right-panel {
+                order: 2;
+            }
+            
+            .center-panel {
+                order: 1;
+            }
+            
+            .board {
+                grid-template-columns: repeat(15, 30px);
+                grid-template-rows: repeat(15, 30px);
+            }
+            
+            .cell {
+                width: 30px;
+                height: 30px;
+                font-size: 0.5rem;
+            }
+            
+            .footer-credit {
+                position: relative;
+                margin-top: 20px;
+                transform: none;
+                left: auto;
+                text-align: center;
+            }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #f4d03f;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status disconnected" id="connectionStatus">Disconnected</div>
+    
+    <div class="menu-screen" id="mainMenu">
+        <div class="menu-content">
+            <h1 style="margin-bottom: 5px;">SCRABBLE</h1>
+            <p>Online Multiplayer Edition</p>
+            <div class="creator-credit">Game Creator: ESL Teacher Ry</div>
+            
+            <div class="input-group">
+                <label>Your Name</label>
+                <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+            </div>
+            
+            <button class="btn" onclick="showCreateRoom()">Create Room</button>
+            <button class="btn btn-secondary" onclick="showJoinRoom()">Join Room</button>
+            
+            <div class="menu-creator">Created with ❤️ by ESL Teacher Ry</div>
+        </div>
+    </div>
+    
+    <div class="menu-screen hidden" id="createRoomScreen">
+        <div class="menu-content">
+            <h2>Create Room</h2>
+            <p>Share this code with friends to invite them</p>
+            
+            <div class="room-code" id="roomCodeDisplay">----</div>
+            
+            <div class="players-waiting" id="playersWaiting">
+                <div class="waiting-player player-1 you">
+                    <strong>You</strong> (Host)
+                </div>
+            </div>
+            
+            <p style="font-size: 0.9rem; color: #888;">Waiting for players... (2-4 players)</p>
+            
+            <button class="btn" onclick="startOnlineGame()" id="startGameBtn" disabled>Start Game</button>
+            <button class="btn btn-secondary" onclick="backToMenu()">Cancel</button>
+            
+            <div class="menu-creator">Created by ESL Teacher Ry</div>
+        </div>
+    </div>
+    
+    <div class="menu-screen hidden" id="joinRoomScreen">
+        <div class="menu-content">
+            <h2>Join Room</h2>
+            <p>Enter the 4-digit room code</p>
+            
+            <div class="input-group">
+                <label>Room Code</label>
+                <input type="text" id="joinRoomCode" placeholder="0000" maxlength="4" style="font-size: 2rem; letter-spacing: 10px;">
+            </div>
+            
+            <button class="btn" onclick="joinRoom()">Join</button>
+            <button class="btn btn-secondary" onclick="backToMenu()">Back</button>
+            
+            <div class="menu-creator">Created by ESL Teacher Ry</div>
+        </div>
+    </div>
+    
+    <div id="gameUI" style="display: none;">
+        <h1>SCRABBLE</h1>
+        <p class="subtitle">Room: <span id="displayRoomCode" style="color: #f4d03f; font-weight: 700;"></span></p>
+        <div class="creator-credit">Game Creator: ESL Teacher Ry</div>
+        
+        <div class="game-container">
+            <div class="left-panel">
+                <h3 class="panel-title">Players</h3>
+                <div id="playersList"></div>
+                <div class="tile-count" id="tilesRemaining">Tiles remaining: 100</div>
+                
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Type a message..." maxlength="100">
+                        <button class="btn btn-secondary" onclick="sendChat()">Send</button>
+                    </div>
+                </div>
+                
+                <div class="legend">
+                    <h3 class="panel-title">Legend</h3>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <span>Triple Word (TW)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ffb6c1;"></div>
+                        <span>Double Word (DW)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2980b9;"></div>
+                        <span>Triple Letter (TL)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #87ceeb;"></div>
+                        <span>Double Letter (DL)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="center-panel">
+                <div class="board-container">
+                    <div class="board" id="board"></div>
+                </div>
+                
+                <div class="rack-container" id="rackContainer">
+                    <div class="rack-label" id="rackLabel">Your Tiles</div>
+                    <div class="rack" id="rack"></div>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <h3 class="panel-title">Game Controls</h3>
+                
+                <div class="turn-info">
+                    <div class="current-player" id="currentPlayer">Waiting...</div>
+                    <div class="last-score" id="lastScore">-</div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn" onclick="submitTurn()" id="submitBtn">Submit Word</button>
+                    <button class="btn btn-secondary" onclick="shuffleRack()">Shuffle Rack</button>
+                    <button class="btn btn-secondary" onclick="recallTiles()">Recall Tiles</button>
+                    <button class="btn btn-secondary" onclick="exchangeTiles()" id="exchangeBtn">Exchange Tiles</button>
+                    <button class="btn btn-danger" onclick="skipTurn()">Skip Turn</button>
+                    <button class="btn btn-secondary" onclick="leaveGame()">Leave Game</button>
+                </div>
+                
+                <h3 class="panel-title" style="margin-top: 20px;">Move History</h3>
+                <div class="word-list" id="moveHistory"></div>
+            </div>
+        </div>
+        
+        <div class="footer-credit">Created with ❤️ by ESL Teacher Ry</div>
+    </div>
+    
+    <div class="modal" id="blankModal">
+        <div class="modal-content">
+            <h2>Choose Letter for Blank Tile</h2>
+            <div class="blank-options" id="blankOptions"></div>
+        </div>
+    </div>
+    
+    <div class="modal" id="gameOverModal">
+        <div class="modal-content game-over">
+            <h2>Game Over!</h2>
+            <div class="winner" id="winnerText"></div>
+            <div class="final-scores" id="finalScores"></div>
+            <button class="btn" onclick="backToMenu()">Back to Menu</button>
+            <div style="margin-top: 20px; color: #f4d03f; font-style: italic;">Created by ESL Teacher Ry</div>
+        </div>
+    </div>
+    
+    <div class="message" id="message"></div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyADB34cDaux6BZOluGhEzWlliSsvAPZdVg",
+            authDomain: "scrabble-c2639.firebaseapp.com",
+            projectId: "scrabble-c2639",
+            storageBucket: "scrabble-c2639.firebasestorage.app",
+            messagingSenderId: "104726108799",
+            appId: "1:104726108799:web:2f45e3a7ad68fa21737d4a",
+            measurementId: "G-JPZXCJTJ1J"
+        };
+        
+        let app, database;
+        let firebaseInitialized = false;
+        
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            firebaseInitialized = true;
+            console.log("Firebase initialized successfully");
+        } catch (e) {
+            console.error("Firebase init failed:", e);
+            showMessage("Firebase initialization failed!", true);
+        }
+        
+        const BOARD_SIZE = 15;
+        const CENTER = 7;
+        
+        const LETTER_DISTRIBUTION = {
+            'A': { count: 9, points: 1 }, 'B': { count: 2, points: 3 },
+            'C': { count: 2, points: 3 }, 'D': { count: 4, points: 2 },
+            'E': { count: 12, points: 1 }, 'F': { count: 2, points: 4 },
+            'G': { count: 3, points: 2 }, 'H': { count: 2, points: 4 },
+            'I': { count: 9, points: 1 }, 'J': { count: 1, points: 8 },
+            'K': { count: 1, points: 5 }, 'L': { count: 4, points: 1 },
+            'M': { count: 2, points: 3 }, 'N': { count: 6, points: 1 },
+            'O': { count: 8, points: 1 }, 'P': { count: 2, points: 3 },
+            'Q': { count: 1, points: 10 }, 'R': { count: 6, points: 1 },
+            'S': { count: 4, points: 1 }, 'T': { count: 6, points: 1 },
+            'U': { count: 4, points: 1 }, 'V': { count: 2, points: 4 },
+            'W': { count: 2, points: 4 }, 'X': { count: 1, points: 8 },
+            'Y': { count: 2, points: 4 }, 'Z': { count: 1, points: 10 },
+            ' ': { count: 2, points: 0 }
+        };
+        
+        const PREMIUM_SQUARES = {
+            '0,0': 'tw', '0,7': 'tw', '0,14': 'tw',
+            '7,0': 'tw', '7,14': 'tw',
+            '14,0': 'tw', '14,7': 'tw', '14,14': 'tw',
+            '1,1': 'dw', '2,2': 'dw', '3,3': 'dw', '4,4': 'dw',
+            '1,13': 'dw', '2,12': 'dw', '3,11': 'dw', '4,10': 'dw',
+            '10,4': 'dw', '11,3': 'dw', '12,2': 'dw', '13,1': 'dw',
+            '10,10': 'dw', '11,11': 'dw', '12,12': 'dw', '13,13': 'dw',
+            '7,7': 'dw',
+            '0,3': 'dl', '0,11': 'dl', '2,6': 'dl', '2,8': 'dl',
+            '3,0': 'dl', '3,7': 'dl', '3,14': 'dl', '6,2': 'dl',
+            '6,6': 'dl', '6,8': 'dl', '6,12': 'dl', '7,3': 'dl',
+            '7,11': 'dl', '8,2': 'dl', '8,6': 'dl', '8,8': 'dl',
+            '8,12': 'dl', '11,0': 'dl', '11,7': 'dl', '11,14': 'dl',
+            '12,6': 'dl', '12,8': 'dl', '14,3': 'dl', '14,11': 'dl',
+            '1,5': 'tl', '1,9': 'tl', '5,1': 'tl', '5,5': 'tl',
+            '5,9': 'tl', '5,13': 'tl', '9,1': 'tl', '9,5': 'tl',
+            '9,9': 'tl', '9,13': 'tl', '13,5': 'tl', '13,9': 'tl'
+        };
+        
+        let gameState = {
+            roomCode: null,
+            playerId: null,
+            playerName: '',
+            isHost: false,
+            players: [],
+            currentPlayerIndex: 0,
+            board: [],
+            tileBag: [],
+            gameStarted: false,
+            gameEnded: false,
+            moveHistory: [],
+            isFirstMove: true
+        };
+        
+        let localState = {
+            selectedTileIndex: -1,
+            currentTurnTiles: [],
+            rack: []
+        };
+        
+        let roomRef = null;
+        let presenceRef = null;
+        let isMyTurn = false;
+        
+        function generateRoomCode() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
+        }
+        
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        
+        function createTileBag() {
+            const bag = [];
+            for (let letter in LETTER_DISTRIBUTION) {
+                for (let i = 0; i < LETTER_DISTRIBUTION[letter].count; i++) {
+                    bag.push({
+                        letter: letter,
+                        points: LETTER_DISTRIBUTION[letter].points,
+                        isBlank: letter === ' '
+                    });
+                }
+            }
+            shuffleArray(bag);
+            return bag;
+        }
+        
+        function drawTiles(bag, count) {
+            const tiles = [];
+            for (let i = 0; i < count && bag.length > 0; i++) {
+                tiles.push(bag.pop());
+            }
+            return tiles;
+        }
+        
+        function showCreateRoom() {
+            const name = document.getElementById('playerName').value.trim();
+            if (!name) {
+                showMessage('Please enter your name!', true);
+                return;
+            }
+            
+            if (!firebaseInitialized) {
+                showMessage('Firebase not configured!', true);
+                return;
+            }
+            
+            gameState.playerName = name;
+            gameState.isHost = true;
+            gameState.roomCode = generateRoomCode();
+            gameState.playerId = 'player_' + Date.now();
+            
+            document.getElementById('roomCodeDisplay').textContent = gameState.roomCode;
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('createRoomScreen').classList.remove('hidden');
+            
+            createRoom();
+        }
+        
+        function showJoinRoom() {
+            const name = document.getElementById('playerName').value.trim();
+            if (!name) {
+                showMessage('Please enter your name!', true);
+                return;
+            }
+            
+            if (!firebaseInitialized) {
+                showMessage('Firebase not configured!', true);
+                return;
+            }
+            
+            gameState.playerName = name;
+            gameState.playerId = 'player_' + Date.now();
+            
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('joinRoomScreen').classList.remove('hidden');
+        }
+        
+        function backToMenu() {
+            if (roomRef) {
+                roomRef.off();
+                if (presenceRef) presenceRef.remove();
+            }
+            location.reload();
+        }
+        
+        function createRoom() {
+            roomRef = database.ref('rooms/' + gameState.roomCode);
+            
+            const initialState = {
+                created: firebase.database.ServerValue.TIMESTAMP,
+                host: gameState.playerId,
+                gameStarted: false,
+                gameEnded: false,
+                players: {
+                    [gameState.playerId]: {
+                        name: gameState.playerName,
+                        index: 0,
+                        score: 0,
+                        rack: [],
+                        connected: true,
+                        lastSeen: firebase.database.ServerValue.TIMESTAMP
+                    }
+                },
+                currentPlayerIndex: 0,
+                board: Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null)),
+                tileBag: createTileBag(),
+                moveHistory: [],
+                isFirstMove: true,
+                chat: []
+            };
+            
+            roomRef.set(initialState).then(() => {
+                setupPresence();
+                listenToRoom();
+                updateConnectionStatus(true);
+            });
+        }
+        
+        function joinRoom() {
+            const code = document.getElementById('joinRoomCode').value.trim();
+            if (!code || code.length !== 4) {
+                showMessage('Enter a valid 4-digit code!', true);
+                return;
+            }
+            
+            gameState.roomCode = code;
+            roomRef = database.ref('rooms/' + code);
+            
+            roomRef.once('value').then(snapshot => {
+                if (!snapshot.exists()) {
+                    showMessage('Room not found!', true);
+                    return;
+                }
+                
+                const data = snapshot.val();
+                if (data.gameStarted) {
+                    showMessage('Game already started!', true);
+                    return;
+                }
+                
+                const playerCount = Object.keys(data.players).length;
+                if (playerCount >= 4) {
+                    showMessage('Room is full!', true);
+                    return;
+                }
+                
+                const usedIndices = Object.values(data.players).map(p => p.index);
+                let availableIndex = 0;
+                while (usedIndices.includes(availableIndex)) availableIndex++;
+                
+                const updates = {};
+                updates['players/' + gameState.playerId] = {
+                    name: gameState.playerName,
+                    index: availableIndex,
+                    score: 0,
+                    rack: [],
+                    connected: true,
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP
+                };
+                
+                roomRef.update(updates).then(() => {
+                    gameState.isHost = false;
+                    setupPresence();
+                    listenToRoom();
+                    document.getElementById('joinRoomScreen').classList.add('hidden');
+                    document.getElementById('createRoomScreen').classList.remove('hidden');
+                    document.getElementById('roomCodeDisplay').textContent = code;
+                    updateConnectionStatus(true);
+                });
+            });
+        }
+        
+        function setupPresence() {
+            presenceRef = roomRef.child('players/' + gameState.playerId);
+            
+            setInterval(() => {
+                if (presenceRef) {
+                    presenceRef.child('lastSeen').set(firebase.database.ServerValue.TIMESTAMP);
+                }
+            }, 5000);
+            
+            presenceRef.child('connected').onDisconnect().set(false);
+        }
+        
+        function listenToRoom() {
+            roomRef.on('value', snapshot => {
+                const data = snapshot.val();
+                if (!data) return;
+                
+                updateGameState(data);
+            });
+        }
+        
+        function updateGameState(data) {
+            gameState.players = Object.entries(data.players || {}).map(([id, p]) => ({
+                id, ...p
+            })).sort((a, b) => a.index - b.index);
+            
+            gameState.currentPlayerIndex = data.currentPlayerIndex || 0;
+            gameState.board = data.board || [];
+            gameState.tileBag = data.tileBag || [];
+            gameState.gameStarted = data.gameStarted || false;
+            gameState.gameEnded = data.gameEnded || false;
+            gameState.moveHistory = data.moveHistory || [];
+            gameState.isFirstMove = data.isFirstMove !== false;
+            
+            if (!gameState.gameStarted) {
+                updateWaitingRoom();
+            }
+            
+            if (gameState.gameStarted && document.getElementById('gameUI').style.display === 'none') {
+                startGameUI();
+            }
+            
+            if (gameState.gameStarted) {
+                updateGameUI();
+            }
+        }
+        
+        function updateWaitingRoom() {
+            const container = document.getElementById('playersWaiting');
+            container.innerHTML = '';
+            
+            gameState.players.forEach((player, idx) => {
+                const div = document.createElement('div');
+                div.className = `waiting-player player-${idx + 1} ${player.id === gameState.playerId ? 'you' : ''}`;
+                div.innerHTML = `<strong>${player.name}</strong> ${player.id === gameState.playerId ? '(You)' : ''}`;
+                container.appendChild(div);
+            });
+            
+            if (gameState.isHost && gameState.players.length >= 2) {
+                document.getElementById('startGameBtn').disabled = false;
+            }
+        }
+        
+        function startOnlineGame() {
+            if (!gameState.isHost) return;
+            
+            const updates = {};
+            const bag = createTileBag();
+            
+            gameState.players.forEach(player => {
+                const tiles = drawTiles(bag, 7);
+                updates[`players/${player.id}/rack`] = tiles;
+            });
+            
+            updates.tileBag = bag;
+            updates.gameStarted = true;
+            updates.startedAt = firebase.database.ServerValue.TIMESTAMP;
+            
+            roomRef.update(updates);
+        }
+        
+        function startGameUI() {
+            document.getElementById('createRoomScreen').classList.add('hidden');
+            document.getElementById('gameUI').style.display = 'block';
+            document.getElementById('displayRoomCode').textContent = gameState.roomCode;
+            
+            initBoard();
+            renderBoard();
+            updatePlayersList();
+            updateRack();
+            updateCurrentPlayer();
+            updateTilesRemaining();
+            updateMoveHistory();
+            setupChatListener();
+        }
+        
+        function initBoard() {
+            if (!gameState.board || gameState.board.length === 0) {
+                gameState.board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
+            }
+        }
+        
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    const key = `${row},${col}`;
+                    const premium = PREMIUM_SQUARES[key];
+                    
+                    if (row === CENTER && col === CENTER) {
+                        cell.classList.add('center');
+                        cell.innerHTML = '★';
+                    } else if (premium) {
+                        cell.classList.add(premium);
+                        cell.innerHTML = premium.toUpperCase();
+                    }
+                    
+                    const existingTile = gameState.board[row] && gameState.board[row][col];
+                    if (existingTile) {
+                        const tileDiv = document.createElement('div');
+                        tileDiv.className = 'tile';
+                        tileDiv.innerHTML = `
+                            ${existingTile.letter}
+                            <span class="points">${existingTile.points || ''}</span>
+                        `;
+                        cell.appendChild(tileDiv);
+                    }
+                    
+                    const turnTile = localState.currentTurnTiles.find(t => t.row === row && t.col === col);
+                    if (turnTile) {
+                        const tileDiv = document.createElement('div');
+                        tileDiv.className = 'tile placed-this-turn';
+                        tileDiv.innerHTML = `
+                            ${turnTile.letter}
+                            <span class="points">${turnTile.points || ''}</span>
+                        `;
+                        cell.innerHTML = '';
+                        cell.appendChild(tileDiv);
+                    }
+                    
+                    if (!isMyTurn) {
+                        cell.classList.add('disabled');
+                    }
+                    
+                    cell.onclick = () => {
+                        if (isMyTurn) cellClicked(row, col);
+                    };
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+        
+        function updatePlayersList() {
+            const list = document.getElementById('playersList');
+            list.innerHTML = '';
+            
+            gameState.players.forEach((player, index) => {
+                const isCurrent = index === gameState.currentPlayerIndex;
+                const isMe = player.id === gameState.playerId;
+                
+                const card = document.createElement('div');
+                card.className = `player-card player-${index + 1} ${isCurrent ? 'active' : ''}`;
+                
+                const connected = player.connected !== false;
+                const timeSinceSeen = Date.now() - (player.lastSeen || 0);
+                const isOnline = connected && timeSinceSeen < 10000;
+                
+                card.innerHTML = `
+                    <div class="player-name">
+                        ${player.name} ${isMe ? '(You)' : ''}
+                        <span class="player-status ${isOnline ? '' : 'offline'}">
+                            ${isOnline ? '●' : '○'}
+                        </span>
+                    </div>
+                    <div class="player-score">${player.score} pts</div>
+                    ${isCurrent ? '<div style="font-size: 0.8rem; color: #f4d03f; margin-top: 5px;">Current Turn</div>' : ''}
+                `;
+                list.appendChild(card);
+            });
+        }
+        
+        function updateRack() {
+            const rackEl = document.getElementById('rack');
+            rackEl.innerHTML = '';
+            
+            const me = gameState.players.find(p => p.id === gameState.playerId);
+            if (!me) return;
+            
+            localState.rack = me.rack || [];
+            
+            if (!isMyTurn) {
+                rackEl.classList.add('disabled');
+            } else {
+                rackEl.classList.remove('disabled');
+            }
+            
+            localState.rack.forEach((tile, index) => {
+                if (!tile) return;
+                
+                const tileDiv = document.createElement('div');
+                tileDiv.className = `rack-tile ${tile.isBlank ? 'blank' : ''} ${index === localState.selectedTileIndex ? 'selected' : ''}`;
+                tileDiv.innerHTML = `
+                    ${tile.letter === ' ' ? '?' : tile.letter}
+                    <span class="points">${tile.points || ''}</span>
+                `;
+                
+                if (isMyTurn) {
+                    tileDiv.onclick = () => selectTile(index);
+                } else {
+                    tileDiv.classList.add('disabled');
+                }
+                
+                rackEl.appendChild(tileDiv);
+            });
+        }
+        
+        function updateCurrentPlayer() {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            isMyTurn = currentPlayer && currentPlayer.id === gameState.playerId;
+            
+            const display = document.getElementById('currentPlayer');
+            if (isMyTurn) {
+                display.textContent = 'Your Turn!';
+                display.style.color = '#2ecc71';
+            } else {
+                display.textContent = currentPlayer ? `${currentPlayer.name}'s Turn` : 'Waiting...';
+                display.style.color = '#f4d03f';
+            }
+            
+            document.getElementById('submitBtn').disabled = !isMyTurn;
+            document.getElementById('exchangeBtn').disabled = !isMyTurn || gameState.tileBag.length < 7;
+            
+            document.getElementById('rackLabel').textContent = isMyTurn ? 'Your Turn - Select a Tile' : 'Waiting for other player...';
+        }
+        
+        function updateTilesRemaining() {
+            document.getElementById('tilesRemaining').textContent = `Tiles remaining: ${gameState.tileBag.length}`;
+        }
+        
+        function updateMoveHistory() {
+            const history = document.getElementById('moveHistory');
+            history.innerHTML = '';
+            
+            (gameState.moveHistory || []).slice().reverse().forEach(move => {
+                const entry = document.createElement('div');
+                entry.className = 'word-entry';
+                entry.innerHTML = `
+                    <span>${move.player}: ${move.word}</span>
+                    <span style="color: #f4d03f;">+${move.score}</span>
+                `;
+                history.appendChild(entry);
+            });
+        }
+        
+        function updateGameUI() {
+            renderBoard();
+            updatePlayersList();
+            updateRack();
+            updateCurrentPlayer();
+            updateTilesRemaining();
+            updateMoveHistory();
+            
+            if (gameState.gameEnded) {
+                showGameOver();
+            }
+        }
+        
+        function selectTile(index) {
+            if (!isMyTurn) return;
+            
+            if (localState.selectedTileIndex === index) {
+                localState.selectedTileIndex = -1;
+            } else {
+                localState.selectedTileIndex = index;
+            }
+            updateRack();
+        }
+        
+        function cellClicked(row, col) {
+            if (!isMyTurn || localState.selectedTileIndex === -1) return;
+            
+            if (gameState.board[row] && gameState.board[row][col]) return;
+            if (localState.currentTurnTiles.find(t => t.row === row && t.col === col)) return;
+            
+            const tile = localState.rack[localState.selectedTileIndex];
+            if (!tile) return;
+            
+            if (tile.isBlank) {
+                showBlankModal(row, col, localState.selectedTileIndex);
+                return;
+            }
+            
+            placeTile(row, col, localState.selectedTileIndex, tile.letter);
+        }
+        
+        function showBlankModal(row, col, rackIndex) {
+            const modal = document.getElementById('blankModal');
+            const options = document.getElementById('blankOptions');
+            options.innerHTML = '';
+            
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            for (let letter of letters) {
+                const btn = document.createElement('div');
+                btn.className = 'blank-option';
+                btn.textContent = letter;
+                btn.onclick = () => {
+                    modal.classList.remove('active');
+                    placeTile(row, col, rackIndex, letter, true);
+                };
+                options.appendChild(btn);
+            }
+            
+            modal.classList.add('active');
+        }
+        
+        function placeTile(row, col, rackIndex, letter, isBlank = false) {
+            const tile = localState.rack[rackIndex];
+            
+            localState.currentTurnTiles.push({
+                row: row,
+                col: col,
+                letter: letter,
+                isBlank: isBlank,
+                rackIndex: rackIndex,
+                points: isBlank ? 0 : tile.points
+            });
+            
+            localState.rack[rackIndex] = null;
+            localState.selectedTileIndex = -1;
+            renderBoard();
+            updateRack();
+        }
+        
+        function recallTiles() {
+            if (!isMyTurn) return;
+            
+            localState.currentTurnTiles.forEach(tile => {
+                const originalTile = {
+                    letter: tile.isBlank ? ' ' : tile.letter,
+                    points: tile.isBlank ? 0 : tile.points,
+                    isBlank: tile.isBlank
+                };
+                localState.rack[tile.rackIndex] = originalTile;
+            });
+            
+            localState.currentTurnTiles = [];
+            renderBoard();
+            updateRack();
+            showMessage('Tiles recalled');
+        }
+        
+        function shuffleRack() {
+            if (!isMyTurn) return;
+            shuffleArray(localState.rack);
+            updateRack();
+        }
+        
+        function skipTurn() {
+            if (!isMyTurn || localState.currentTurnTiles.length > 0) {
+                showMessage('Recall tiles before skipping!', true);
+                return;
+            }
+            
+            const me = gameState.players.find(p => p.id === gameState.playerId);
+            
+            const move = {
+                player: me.name,
+                word: 'Skipped',
+                score: 0,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            const nextIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            
+            roomRef.update({
+                currentPlayerIndex: nextIndex,
+                moveHistory: [...(gameState.moveHistory || []), move]
+            });
+            
+            showMessage('Turn skipped');
+        }
+        
+        function exchangeTiles() {
+            if (!isMyTurn || localState.currentTurnTiles.length > 0) return;
+            if (gameState.tileBag.length < 7) {
+                showMessage('Not enough tiles!', true);
+                return;
+            }
+            
+            const me = gameState.players.find(p => p.id === gameState.playerId);
+            const currentRack = [...localState.rack];
+            
+            const newBag = [...gameState.tileBag, ...currentRack.filter(t => t)];
+            shuffleArray(newBag);
+            
+            const newRack = drawTiles(newBag, 7);
+            
+            const move = {
+                player: me.name,
+                word: 'Exchanged tiles',
+                score: 0,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            const nextIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            
+            const updates = {};
+            updates[`players/${gameState.playerId}/rack`] = newRack;
+            updates.tileBag = newBag;
+            updates.currentPlayerIndex = nextIndex;
+            updates.moveHistory = [...(gameState.moveHistory || []), move];
+            
+            roomRef.update(updates);
+            showMessage('Tiles exchanged');
+        }
+        
+        function calculateScore() {
+            if (localState.currentTurnTiles.length === 0) return 0;
+            
+            let totalScore = 0;
+            const words = findWords();
+            
+            words.forEach(word => {
+                let wordScore = 0;
+                let wordMultiplier = 1;
+                
+                word.tiles.forEach(tile => {
+                    let letterScore = tile.points;
+                    const key = `${tile.row},${tile.col}`;
+                    const premium = PREMIUM_SQUARES[key];
+                    
+                    const isNewTile = localState.currentTurnTiles.find(t => t.row === tile.row && t.col === tile.col);
+                    
+                    if (isNewTile) {
+                        if (premium === 'dl') letterScore *= 2;
+                        else if (premium === 'tl') letterScore *= 3;
+                        else if (premium === 'dw') wordMultiplier *= 2;
+                        else if (premium === 'tw') wordMultiplier *= 3;
+                    }
+                    
+                    wordScore += letterScore;
+                });
+                
+                totalScore += wordScore * wordMultiplier;
+            });
+            
+            if (localState.currentTurnTiles.length === 7) {
+                totalScore += 50;
+            }
+            
+            return { score: totalScore, words: words.map(w => w.word) };
+        }
+        
+        function findWords() {
+            const words = [];
+            const processed = new Set();
+            
+            localState.currentTurnTiles.forEach(tile => {
+                const hKey = `h-${tile.row}-${tile.col}`;
+                if (!processed.has(hKey)) {
+                    const hWord = getWordAt(tile.row, tile.col, true);
+                    if (hWord && hWord.tiles.length > 1) {
+                        words.push(hWord);
+                        hWord.tiles.forEach(t => processed.add(`h-${t.row}-${t.col}`));
+                    }
+                }
+                
+                const vKey = `v-${tile.row}-${tile.col}`;
+                if (!processed.has(vKey)) {
+                    const vWord = getWordAt(tile.row, tile.col, false);
+                    if (vWord && vWord.tiles.length > 1) {
+                        words.push(vWord);
+                        vWord.tiles.forEach(t => processed.add(`v-${t.row}-${t.col}`));
+                    }
+                }
+            });
+            
+            return words;
+        }
+        
+        function getWordAt(row, col, horizontal) {
+            let start = horizontal ? col : row;
+            const fixed = horizontal ? row : col;
+            
+            while (start > 0) {
+                const checkRow = horizontal ? fixed : start - 1;
+                const checkCol = horizontal ? start - 1 : fixed;
+                if (!getTileAt(checkRow, checkCol)) break;
+                start--;
+            }
+            
+            const tiles = [];
+            let pos = start;
+            let word = '';
+            
+            while (pos < BOARD_SIZE) {
+                const checkRow = horizontal ? fixed : pos;
+                const checkCol = horizontal ? pos : fixed;
+                const tile = getTileAt(checkRow, checkCol);
+                
+                if (!tile) break;
+                
+                tiles.push({ ...tile, row: checkRow, col: checkCol });
+                word += tile.letter;
+                pos++;
+            }
+            
+            return word.length > 1 ? { word, tiles } : null;
+        }
+        
+        function getTileAt(row, col) {
+            if (gameState.board[row] && gameState.board[row][col]) {
+                return gameState.board[row][col];
+            }
+            const turnTile = localState.currentTurnTiles.find(t => t.row === row && t.col === col);
+            if (turnTile) return { letter: turnTile.letter, points: turnTile.points };
+            return null;
+        }
+        
+        function validateTurn() {
+            if (localState.currentTurnTiles.length === 0) {
+                return { valid: false, message: 'No tiles placed!' };
+            }
+            
+            const rows = localState.currentTurnTiles.map(t => t.row);
+            const cols = localState.currentTurnTiles.map(t => t.col);
+            const uniqueRows = [...new Set(rows)];
+            const uniqueCols = [...new Set(cols)];
+            
+            const horizontal = uniqueRows.length === 1;
+            const vertical = uniqueCols.length === 1;
+            
+            if (!horizontal && !vertical) {
+                return { valid: false, message: 'Tiles must be in a straight line!' };
+            }
+            
+            if (gameState.isFirstMove) {
+                const touchesCenter = localState.currentTurnTiles.some(t => t.row === CENTER && t.col === CENTER);
+                if (!touchesCenter) {
+                    return { valid: false, message: 'First word must touch the center!' };
+                }
+            } else {
+                let connects = false;
+                for (let tile of localState.currentTurnTiles) {
+                    const neighbors = [[tile.row-1, tile.col], [tile.row+1, tile.col], [tile.row, tile.col-1], [tile.row, tile.col+1]];
+                    for (let [nr, nc] of neighbors) {
+                        if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+                            if (gameState.board[nr] && gameState.board[nr][nc]) {
+                                connects = true;
+                                break;
+                            }
+                        }
+                    }
+                    const connectsToNew = localState.currentTurnTiles.some(t => 
+                        t !== tile && 
+                        ((Math.abs(t.row - tile.row) === 1 && t.col === tile.col) ||
+                         (Math.abs(t.col - tile.col) === 1 && t.row === tile.row))
+                    );
+                    if (connectsToNew) connects = true;
+                }
+                if (!connects) {
+                    return { valid: false, message: 'Must connect to existing words!' };
+                }
+            }
+            
+            if (horizontal) {
+                const minCol = Math.min(...cols);
+                const maxCol = Math.max(...cols);
+                const row = uniqueRows[0];
+                for (let c = minCol; c <= maxCol; c++) {
+                    if (!getTileAt(row, c)) {
+                        return { valid: false, message: 'No gaps allowed!' };
+                    }
+                }
+            } else {
+                const minRow = Math.min(...rows);
+                const maxRow = Math.max(...rows);
+                const col = uniqueCols[0];
+                for (let r = minRow; r <= maxRow; r++) {
+                    if (!getTileAt(r, col)) {
+                        return { valid: false, message: 'No gaps allowed!' };
+                    }
+                }
+            }
+            
+            const words = findWords();
+            if (words.length === 0) {
+                return { valid: false, message: 'Must form at least one word!' };
+            }
+            
+            return { valid: true };
+        }
+        
+        function submitTurn() {
+            if (!isMyTurn) return;
+            
+            const validation = validateTurn();
+            if (!validation.valid) {
+                showMessage(validation.message, true);
+                return;
+            }
+            
+            const result = calculateScore();
+            const me = gameState.players.find(p => p.id === gameState.playerId);
+            
+            const newBoard = gameState.board.map(row => [...row]);
+            localState.currentTurnTiles.forEach(tile => {
+                newBoard[tile.row][tile.col] = {
+                    letter: tile.letter,
+                    points: tile.points
+                };
+            });
+            
+            const newRack = localState.rack.filter(t => t !== null);
+            const tilesNeeded = 7 - newRack.length;
+            const drawnTiles = drawTiles(gameState.tileBag, tilesNeeded);
+            newRack.push(...drawnTiles);
+            
+            let score = result.score;
+            if (localState.currentTurnTiles.length === 7) {
+                showMessage('BINGO! +50 bonus!');
+            }
+            
+            const move = {
+                player: me.name,
+                word: result.words.join(', '),
+                score: score,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            const nextIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            const newScore = me.score + score;
+            
+            let gameEnded = false;
+            if (newRack.length === 0 || gameState.tileBag.length === 0) {
+                gameEnded = true;
+            }
+            
+            const updates = {};
+            updates[`players/${gameState.playerId}/rack`] = newRack;
+            updates[`players/${gameState.playerId}/score`] = newScore;
+            updates.board = newBoard;
+            updates.tileBag = gameState.tileBag;
+            updates.currentPlayerIndex = nextIndex;
+            updates.moveHistory = [...(gameState.moveHistory || []), move];
+            updates.isFirstMove = false;
+            if (gameEnded) updates.gameEnded = true;
+            
+            roomRef.update(updates).then(() => {
+                localState.currentTurnTiles = [];
+                localState.selectedTileIndex = -1;
+                
+                if (gameEnded) {
+                    calculateFinalScores();
+                }
+            });
+        }
+        
+        function calculateFinalScores() {
+            const updates = {};
+            gameState.players.forEach(player => {
+                const remaining = (player.rack || []).reduce((sum, tile) => sum + (tile ? tile.points : 0), 0);
+                updates[`players/${player.id}/score`] = player.score - remaining;
+            });
+            roomRef.update(updates);
+        }
+        
+        function showGameOver() {
+            const winner = gameState.players.reduce((max, p) => p.score > max.score ? p : max);
+            document.getElementById('winnerText').textContent = `${winner.name} Wins!`;
+            
+            const scoresDiv = document.getElementById('finalScores');
+            scoresDiv.innerHTML = gameState.players
+                .sort((a, b) => b.score - a.score)
+                .map((p, i) => `
+                    <div class="final-score-item">
+                        <span>${i + 1}. ${p.name}</span>
+                        <span>${p.score} pts</span>
+                    </div>
+                `).join('');
+            
+            document.getElementById('gameOverModal').classList.add('active');
+        }
+        
+        function sendChat() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            const me = gameState.players.find(p => p.id === gameState.playerId);
+            const chatMessage = {
+                player: me.name,
+                message: message,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            const currentChat = gameState.chat || [];
+            roomRef.child('chat').set([...currentChat.slice(-49), chatMessage]);
+            input.value = '';
+        }
+        
+        function setupChatListener() {
+            roomRef.child('chat').on('value', snapshot => {
+                const messages = snapshot.val() || [];
+                gameState.chat = messages;
+                const container = document.getElementById('chatMessages');
+                container.innerHTML = messages.map(m => `
+                    <div class="chat-message">
+                        <span class="player">${m.player}:</span> ${m.message}
+                    </div>
+                `).join('');
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+        
+        function showMessage(msg, isError = false) {
+            const el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = 'message ' + (isError ? 'error' : '') + ' show';
+            setTimeout(() => el.classList.remove('show'), 3000);
+        }
+        
+        function updateConnectionStatus(connected) {
+            const el = document.getElementById('connectionStatus');
+            el.textContent = connected ? 'Connected' : 'Disconnected';
+            el.className = 'connection-status ' + (connected ? 'connected' : 'disconnected');
+        }
+        
+        function leaveGame() {
+            if (confirm('Leave this game?')) {
+                backToMenu();
+            }
+        }
+        
+        document.getElementById('chatInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendChat();
+        });
+        
+        document.getElementById('joinRoomCode')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') joinRoom();
+        });
+        
+        document.getElementById('playerName')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') showCreateRoom();
+        });
+    </script>
+</body>
+</html>
