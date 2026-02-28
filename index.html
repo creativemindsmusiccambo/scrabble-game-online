@@ -1597,7 +1597,6 @@
             showMessage('Tiles exchanged');
         }
         
-        // FIXED: Simplified word finding
         function calculateScore() {
             if (localState.currentTurnTiles.length === 0) return { score: 0, words: [] };
             
@@ -1635,7 +1634,6 @@
                 totalScore += wordScore * wordMultiplier;
             });
             
-            // Bingo bonus
             if (localState.currentTurnTiles.length === 7) {
                 totalScore += 50;
             }
@@ -1643,7 +1641,6 @@
             return { score: totalScore, words: words.map(w => w.word).filter(w => w) };
         }
         
-        // FIXED: Simplified findWords
         function findWords() {
             const words = [];
             const processed = new Set();
@@ -1655,7 +1652,6 @@
             localState.currentTurnTiles.forEach(tile => {
                 if (!tile) return;
                 
-                // Check horizontal word
                 const hWord = getWordAt(tile.row, tile.col, true);
                 if (hWord && hWord.word && hWord.word.length > 1) {
                     const key = 'h-' + hWord.word;
@@ -1665,7 +1661,6 @@
                     }
                 }
                 
-                // Check vertical word
                 const vWord = getWordAt(tile.row, tile.col, false);
                 if (vWord && vWord.word && vWord.word.length > 1) {
                     const key = 'v-' + vWord.word;
@@ -1679,14 +1674,12 @@
             return words;
         }
         
-        // FIXED: Simplified getWordAt
         function getWordAt(row, col, horizontal) {
             if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return null;
             
             let start = horizontal ? col : row;
             const fixed = horizontal ? row : col;
             
-            // Find start of word
             while (start > 0) {
                 const checkRow = horizontal ? fixed : start - 1;
                 const checkCol = horizontal ? start - 1 : fixed;
@@ -1698,7 +1691,6 @@
             let pos = start;
             let word = '';
             
-            // Build word from start
             while (pos < BOARD_SIZE) {
                 const checkRow = horizontal ? fixed : pos;
                 const checkCol = horizontal ? pos : fixed;
@@ -1774,7 +1766,6 @@
                 }
             }
             
-            // Check for gaps
             if (horizontal) {
                 const minCol = Math.min(...cols);
                 const maxCol = Math.max(...cols);
@@ -1803,6 +1794,7 @@
             return { valid: true };
         }
         
+        // FIXED submitTurn function
         function submitTurn() {
             if (!isMyTurn) {
                 showMessage('Not your turn!', true);
@@ -1818,13 +1810,27 @@
             const result = calculateScore();
             const me = gameState.players.find(p => p.id === gameState.playerId);
             
-            // Create new board state
-            const newBoard = gameState.board.map(row => [...row]);
+            // FIX: Create new board state properly - ensure all rows exist
+            const newBoard = [];
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                newBoard[r] = [];
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (gameState.board[r] && gameState.board[r][c]) {
+                        newBoard[r][c] = gameState.board[r][c];
+                    } else {
+                        newBoard[r][c] = null;
+                    }
+                }
+            }
+            
+            // Place new tiles
             localState.currentTurnTiles.forEach(tile => {
-                newBoard[tile.row][tile.col] = {
-                    letter: tile.letter,
-                    points: tile.points
-                };
+                if (tile && tile.row >= 0 && tile.row < BOARD_SIZE && tile.col >= 0 && tile.col < BOARD_SIZE) {
+                    newBoard[tile.row][tile.col] = {
+                        letter: tile.letter,
+                        points: tile.points
+                    };
+                }
             });
             
             // Update rack
