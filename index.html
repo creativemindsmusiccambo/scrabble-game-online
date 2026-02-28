@@ -916,7 +916,7 @@
         const firebaseConfig = {
             apiKey: "AIzaSyADB34cDaux6BZOluGhEzWlliSsvAPZdVg",
             authDomain: "scrabble-c2639.firebaseapp.com",
-            databaseURL: "https://scrabble-c2639-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            databaseURL: "https://scrabble-c2639-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "scrabble-c2639",
             storageBucket: "scrabble-c2639.firebasestorage.app",
             messagingSenderId: "104726108799",
@@ -1597,18 +1597,26 @@
             showMessage('Tiles exchanged');
         }
         
+        // FIXED: Simplified word finding
         function calculateScore() {
-            if (localState.currentTurnTiles.length === 0) return 0;
+            if (localState.currentTurnTiles.length === 0) return { score: 0, words: [] };
             
             let totalScore = 0;
             const words = findWords();
             
+            if (!words || words.length === 0) {
+                return { score: 0, words: [] };
+            }
+            
             words.forEach(word => {
+                if (!word || !word.tiles || word.tiles.length === 0) return;
+                
                 let wordScore = 0;
                 let wordMultiplier = 1;
                 
                 word.tiles.forEach(tile => {
-                    let letterScore = tile.points;
+                    if (!tile) return;
+                    let letterScore = tile.points || 0;
                     const key = `${tile.row},${tile.col}`;
                     const premium = PREMIUM_SQUARES[key];
                     
@@ -1627,33 +1635,43 @@
                 totalScore += wordScore * wordMultiplier;
             });
             
+            // Bingo bonus
             if (localState.currentTurnTiles.length === 7) {
                 totalScore += 50;
             }
             
-            return { score: totalScore, words: words.map(w => w.word) };
+            return { score: totalScore, words: words.map(w => w.word).filter(w => w) };
         }
         
+        // FIXED: Simplified findWords
         function findWords() {
             const words = [];
             const processed = new Set();
             
+            if (!localState.currentTurnTiles || localState.currentTurnTiles.length === 0) {
+                return words;
+            }
+            
             localState.currentTurnTiles.forEach(tile => {
-                const hKey = `h-${tile.row}-${tile.col}`;
-                if (!processed.has(hKey)) {
-                    const hWord = getWordAt(tile.row, tile.col, true);
-                    if (hWord && hWord.tiles.length > 1) {
+                if (!tile) return;
+                
+                // Check horizontal word
+                const hWord = getWordAt(tile.row, tile.col, true);
+                if (hWord && hWord.word && hWord.word.length > 1) {
+                    const key = 'h-' + hWord.word;
+                    if (!processed.has(key)) {
                         words.push(hWord);
-                        hWord.tiles.forEach(t => processed.add(`h-${t.row}-${t.col}`));
+                        processed.add(key);
                     }
                 }
                 
-                const vKey = `v-${tile.row}-${tile.col}`;
-                if (!processed.has(vKey)) {
-                    const vWord = getWordAt(tile.row, tile.col, false);
-                    if (vWord && vWord.tiles.length > 1) {
+                // Check vertical word
+                const vWord = getWordAt(tile.row, tile.col, false);
+                if (vWord && vWord.word && vWord.word.length > 1) {
+                    const key = 'v-' + vWord.word;
+                    if (!processed.has(key)) {
                         words.push(vWord);
-                        vWord.tiles.forEach(t => processed.add(`v-${t.row}-${t.col}`));
+                        processed.add(key);
                     }
                 }
             });
@@ -1661,10 +1679,14 @@
             return words;
         }
         
+        // FIXED: Simplified getWordAt
         function getWordAt(row, col, horizontal) {
+            if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return null;
+            
             let start = horizontal ? col : row;
             const fixed = horizontal ? row : col;
             
+            // Find start of word
             while (start > 0) {
                 const checkRow = horizontal ? fixed : start - 1;
                 const checkCol = horizontal ? start - 1 : fixed;
@@ -1676,6 +1698,7 @@
             let pos = start;
             let word = '';
             
+            // Build word from start
             while (pos < BOARD_SIZE) {
                 const checkRow = horizontal ? fixed : pos;
                 const checkCol = horizontal ? pos : fixed;
@@ -1683,15 +1706,25 @@
                 
                 if (!tile) break;
                 
-                tiles.push({ ...tile, row: checkRow, col: checkCol });
+                tiles.push({
+                    letter: tile.letter,
+                    points: tile.points,
+                    row: checkRow,
+                    col: checkCol
+                });
                 word += tile.letter;
                 pos++;
             }
             
-            return word.length > 1 ? { word, tiles } : null;
+            if (word.length > 1) {
+                return { word: word, tiles: tiles };
+            }
+            return null;
         }
         
         function getTileAt(row, col) {
+            if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return null;
+            
             if (gameState.board[row] && gameState.board[row][col]) {
                 return gameState.board[row][col];
             }
@@ -1734,18 +1767,14 @@
                             }
                         }
                     }
-                    const connectsToNew = localState.currentTurnTiles.some(t => 
-                        t !== tile && 
-                        ((Math.abs(t.row - tile.row) === 1 && t.col === tile.col) ||
-                         (Math.abs(t.col - tile.col) === 1 && t.row === tile.row))
-                    );
-                    if (connectsToNew) connects = true;
+                    if (connects) break;
                 }
                 if (!connects) {
                     return { valid: false, message: 'Must connect to existing words!' };
                 }
             }
             
+            // Check for gaps
             if (horizontal) {
                 const minCol = Math.min(...cols);
                 const maxCol = Math.max(...cols);
@@ -1766,8 +1795,8 @@
                 }
             }
             
-            const words = findWords();
-            if (words.length === 0) {
+            const result = calculateScore();
+            if (!result.words || result.words.length === 0) {
                 return { valid: false, message: 'Must form at least one word!' };
             }
             
@@ -1775,7 +1804,10 @@
         }
         
         function submitTurn() {
-            if (!isMyTurn) return;
+            if (!isMyTurn) {
+                showMessage('Not your turn!', true);
+                return;
+            }
             
             const validation = validateTurn();
             if (!validation.valid) {
@@ -1786,6 +1818,7 @@
             const result = calculateScore();
             const me = gameState.players.find(p => p.id === gameState.playerId);
             
+            // Create new board state
             const newBoard = gameState.board.map(row => [...row]);
             localState.currentTurnTiles.forEach(tile => {
                 newBoard[tile.row][tile.col] = {
@@ -1794,6 +1827,7 @@
                 };
             });
             
+            // Update rack
             const newRack = localState.rack.filter(t => t !== null);
             const tilesNeeded = 7 - newRack.length;
             const drawnTiles = drawTiles(gameState.tileBag, tilesNeeded);
@@ -1836,6 +1870,9 @@
                 if (gameEnded) {
                     calculateFinalScores();
                 }
+            }).catch(error => {
+                console.error("Submit error:", error);
+                showMessage('Error submitting turn!', true);
             });
         }
         
@@ -1928,6 +1965,4 @@
         });
     </script>
 </body>
-
 </html>
-
