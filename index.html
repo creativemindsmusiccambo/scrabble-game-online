@@ -913,6 +913,7 @@
     <div class="message" id="message"></div>
 
     <script>
+        // FIXED: Removed trailing space from databaseURL
         const firebaseConfig = {
             apiKey: "AIzaSyADB34cDaux6BZOluGhEzWlliSsvAPZdVg",
             authDomain: "scrabble-c2639.firebaseapp.com",
@@ -1794,7 +1795,7 @@
             return { valid: true };
         }
         
-        // FIXED submitTurn function
+        // FIXED: Complete submitTurn function
         function submitTurn() {
             if (!isMyTurn) {
                 showMessage('Not your turn!', true);
@@ -1810,7 +1811,7 @@
             const result = calculateScore();
             const me = gameState.players.find(p => p.id === gameState.playerId);
             
-            // FIX: Create new board state properly - ensure all rows exist
+            // Create new board state properly - ensure all rows exist
             const newBoard = [];
             for (let r = 0; r < BOARD_SIZE; r++) {
                 newBoard[r] = [];
