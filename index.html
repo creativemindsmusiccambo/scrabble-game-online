@@ -667,7 +667,6 @@
             border-radius: 8px;
             font-size: 1.1em;
             text-align: center;
-            text-transform: uppercase;
             transition: all 0.3s;
         }
 
@@ -675,6 +674,10 @@
             outline: none;
             border-color: var(--gold);
             box-shadow: 0 0 15px rgba(255,215,0,0.3);
+        }
+
+        .modal input::placeholder {
+            color: #666;
         }
 
         .modal-buttons {
@@ -829,6 +832,7 @@
         .toast.success { border-color: #2ecc71; color: #2ecc71; }
         .toast.error { border-color: #e74c3c; color: #e74c3c; }
     </style>
+<base target="_blank">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -841,14 +845,24 @@
     <div class="modal-overlay" id="connectionModal">
         <div class="modal">
             <h2>🏠 Join or Create Game</h2>
-            <p style="margin-bottom: 20px; color: #aaa;">Enter a room code to join a friend's game, or create a new one.</p>
-            <input type="text" id="roomInput" placeholder="ROOM CODE (e.g., ABC123)" maxlength="6">
+            
+            <!-- Name Input - NEW -->
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; color: #aaa; margin-bottom: 5px; font-size: 0.9em;">Your Name</label>
+                <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="15" value="Player">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; color: #aaa; margin-bottom: 5px; font-size: 0.9em;">Room Code (for joining)</label>
+                <input type="text" id="roomInput" placeholder="ROOM CODE (e.g., ABC123)" maxlength="6">
+            </div>
+            
             <div class="modal-buttons">
                 <button class="btn btn-primary btn-large" onclick="game.createRoom()">Create New Game</button>
                 <button class="btn btn-secondary btn-large" onclick="game.joinRoom()">Join Game</button>
             </div>
             <p style="margin-top: 20px; font-size: 0.8em; color: #666;">
-                Share the room code with your opponent to play together!
+                Create a room and share the code with a friend!
             </p>
         </div>
     </div>
@@ -899,7 +913,7 @@
             <!-- Player 1 -->
             <div class="player-card waiting" id="player1Card">
                 <div class="player-header">
-                    <span class="player-name">Player 1</span>
+                    <span class="player-name" id="player1NameDisplay">Player 1</span>
                     <span class="player-status" id="player1Status">Waiting...</span>
                 </div>
                 <div class="player-score" id="score1">0</div>
@@ -908,7 +922,7 @@
             <!-- Player 2 -->
             <div class="player-card waiting" id="player2Card">
                 <div class="player-header">
-                    <span class="player-name">Player 2</span>
+                    <span class="player-name" id="player2NameDisplay">Player 2</span>
                     <span class="player-status" id="player2Status">Waiting...</span>
                 </div>
                 <div class="player-score" id="score2">0</div>
@@ -986,7 +1000,6 @@
             }
 
             playTilePlace() {
-                // Wood block sound
                 this.playTone(200, 'sine', 0.1, 0.5);
                 setTimeout(() => this.playTone(150, 'sine', 0.08, 0.4), 50);
             }
@@ -996,35 +1009,30 @@
             }
 
             playWordValid() {
-                // Victory arpeggio
-                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                const notes = [523.25, 659.25, 783.99, 1046.50];
                 notes.forEach((freq, i) => {
                     setTimeout(() => this.playTone(freq, 'sine', 0.3, 0.4), i * 80);
                 });
             }
 
             playWordInvalid() {
-                // Error buzz
                 this.playTone(150, 'sawtooth', 0.3, 0.5);
                 setTimeout(() => this.playTone(100, 'sawtooth', 0.3, 0.5), 150);
             }
 
             playTurnChange() {
-                // Notification chime
                 this.playTone(440, 'sine', 0.1, 0.3);
                 setTimeout(() => this.playTone(554, 'sine', 0.1, 0.3), 100);
                 setTimeout(() => this.playTone(659, 'sine', 0.2, 0.3), 200);
             }
 
             playPlayerJoined() {
-                // Welcome chord
                 this.playTone(523, 'sine', 0.2, 0.4);
                 setTimeout(() => this.playTone(659, 'sine', 0.2, 0.4), 150);
                 setTimeout(() => this.playTone(783, 'sine', 0.4, 0.4), 300);
             }
 
             playShuffle() {
-                // Shuffling sound
                 for (let i = 0; i < 6; i++) {
                     setTimeout(() => {
                         const freq = 200 + Math.random() * 300;
@@ -1034,7 +1042,6 @@
             }
 
             playGameStart() {
-                // Fanfare
                 [523, 659, 783, 1046, 1318].forEach((freq, i) => {
                     setTimeout(() => this.playTone(freq, 'sine', 0.4, 0.4), i * 120);
                 });
@@ -1113,7 +1120,7 @@
                 this.audio = new AudioSystem();
                 this.vfx = new VisualEffects();
                 
-                // Firebase configuration - REPLACE WITH YOUR CONFIG
+                // REPLACE WITH YOUR FIREBASE CONFIG
                 this.firebaseConfig = {
                     apiKey: "YOUR_API_KEY",
                     authDomain: "your-project.firebaseapp.com",
@@ -1128,6 +1135,7 @@
                 this.roomId = null;
                 this.playerId = null;
                 this.playerNumber = null;
+                this.playerName = "Player";
                 this.gameState = null;
                 this.board = [];
                 this.rack = [];
@@ -1141,33 +1149,29 @@
                     'A': 1, 'B': 3, 'C': 3, 'D': 2, 'E': 1, 'F': 4, 'G': 2, 'H': 4,
                     'I': 1, 'J': 8, 'K': 5, 'L': 1, 'M': 3, 'N': 1, 'O': 1, 'P': 3,
                     'Q': 10, 'R': 1, 'S': 1, 'T': 1, 'U': 1, 'V': 4, 'W': 4, 'X': 8,
-                    'Y': 4, 'Z': 10, '': 0
+                    'Y': 4, 'Z': 10, ' ': 0
                 };
                 
                 this.init();
             }
 
             init() {
-                // Initialize audio on first interaction
                 document.addEventListener('click', () => {
                     this.audio.init();
                 }, { once: true });
 
-                // Sound toggle
                 document.getElementById('soundToggle').addEventListener('click', (e) => {
                     const enabled = this.audio.toggle();
                     e.target.textContent = enabled ? '🔊' : '🔇';
                     e.target.classList.toggle('muted', !enabled);
                 });
 
-                // Enter key in room input
                 document.getElementById('roomInput').addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') this.joinRoom();
                 });
 
                 this.createBackgroundAnimation();
                 
-                // Hide loading screen
                 setTimeout(() => {
                     document.getElementById('loadingScreen').classList.add('hidden');
                 }, 800);
@@ -1197,18 +1201,25 @@
                 return code;
             }
 
+            getPlayerName() {
+                const input = document.getElementById('playerNameInput');
+                const name = input.value.trim();
+                return name || 'Player ' + this.playerNumber;
+            }
+
             createRoom() {
                 if (!this.initializeFirebase()) return;
                 
+                this.playerName = this.getPlayerName();
                 this.roomId = this.generateRoomCode();
                 this.playerId = this.generatePlayerId();
                 this.playerNumber = 1;
                 
                 document.getElementById('roomCodeDisplay').textContent = this.roomId;
+                document.getElementById('player1NameDisplay').textContent = this.playerName;
                 this.hideModal();
                 document.getElementById('gameContainer').style.display = 'flex';
                 
-                // Initialize game state
                 const initialState = this.createInitialGameState();
                 
                 this.db.ref('rooms/' + this.roomId).set(initialState)
@@ -1233,13 +1244,13 @@
                 
                 if (!this.initializeFirebase()) return;
                 
+                this.playerName = this.getPlayerName();
                 this.roomId = roomCode;
                 this.playerId = this.generatePlayerId();
                 this.playerNumber = 2;
                 
                 document.getElementById('roomCodeDisplay').textContent = this.roomId;
                 
-                // Check if room exists
                 this.db.ref('rooms/' + this.roomId).once('value')
                     .then(snapshot => {
                         if (!snapshot.exists()) {
@@ -1251,17 +1262,17 @@
                             throw new Error('Room is full');
                         }
                         
-                        // Join as player 2
                         const updates = {
                             'players/2': {
                                 connected: true,
                                 id: this.playerId,
+                                name: this.playerName,
                                 rack: this.drawTiles(data.tileBag, 7),
                                 joinedAt: Date.now()
                             },
                             'tileBag': data.tileBag.slice(7),
                             'log': [...(data.log || []), { 
-                                message: 'Player 2 joined the game!', 
+                                message: this.playerName + ' joined the game!', 
                                 type: 'success', 
                                 timestamp: Date.now() 
                             }]
@@ -1300,12 +1311,14 @@
                         1: {
                             connected: true,
                             id: this.playerId,
+                            name: this.playerName,
                             rack: this.drawTiles(tileBag, 7),
                             joinedAt: Date.now()
                         },
                         2: {
                             connected: false,
                             id: null,
+                            name: null,
                             rack: [],
                             joinedAt: null
                         }
@@ -1350,7 +1363,6 @@
                     }
                 }
                 
-                // Fisher-Yates shuffle
                 for (let i = bag.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [bag[i], bag[j]] = [bag[j], bag[i]];
@@ -1368,7 +1380,6 @@
             }
 
             setupGameListeners() {
-                // Listen for game state changes
                 this.gameRef = this.db.ref('rooms/' + this.roomId);
                 this.gameRef.on('value', (snapshot) => {
                     const data = snapshot.val();
@@ -1382,14 +1393,16 @@
                     this.updateUI(data);
                 });
 
-                // Handle disconnect
                 this.db.ref('rooms/' + this.roomId + '/players/' + this.playerNumber + '/connected').onDisconnect().set(false);
             }
 
             updateUI(data) {
-                // Update player statuses
                 const p1 = data.players[1] || {};
                 const p2 = data.players[2] || {};
+                
+                // Update player names
+                document.getElementById('player1NameDisplay').textContent = p1.name || 'Player 1';
+                document.getElementById('player2NameDisplay').textContent = p2.name || 'Player 2';
                 
                 // Player 1 card
                 const p1Card = document.getElementById('player1Card');
@@ -1435,12 +1448,12 @@
                     turnIndicator.className = 'turn-indicator your-turn';
                     this.enableControls(true);
                     
-                    // Play turn sound if it just became our turn
                     if (this.lastTurn !== this.playerNumber) {
                         this.audio.playTurnChange();
                     }
                 } else {
-                    turnIndicator.textContent = `⏳ Waiting for Player ${data.currentPlayer}...`;
+                    const opponentName = this.playerNumber === 1 ? (p2.name || 'Player 2') : (p1.name || 'Player 1');
+                    turnIndicator.textContent = `⏳ Waiting for ${opponentName}...`;
                     turnIndicator.className = 'turn-indicator waiting';
                     this.enableControls(false);
                 }
@@ -1452,7 +1465,7 @@
                     this.renderLog(data.log);
                 }
                 
-                // Check for opponent moves to animate
+                // Check for opponent moves
                 if (data.lastMove && 
                     data.lastMove.player !== this.playerNumber && 
                     data.lastMove.timestamp !== this.lastMoveTimestamp) {
@@ -1471,23 +1484,19 @@
             renderBoard(boardData) {
                 const boardEl = document.getElementById('board');
                 
-                // Create grid if empty
                 if (boardEl.children.length === 0) {
                     this.createBoardGrid(boardEl);
                 }
                 
-                // Update cells
                 for (let row = 0; row < 15; row++) {
                     for (let col = 0; col < 15; col++) {
                         const cell = this.board[row][col].element;
                         const letter = boardData[row][col];
                         
-                        // Skip if we just placed this tile (it's being animated)
                         if (this.placedTiles.find(pt => pt.row === row && pt.col === col)) {
                             continue;
                         }
                         
-                        // Clear and redraw if changed
                         const existing = cell.querySelector('.tile');
                         if (existing) existing.remove();
                         
@@ -1549,7 +1558,6 @@
                             }
                         }
                         
-                        // Drag and drop events
                         cell.addEventListener('dragover', (e) => {
                             e.preventDefault();
                             cell.style.transform = 'scale(1.1)';
@@ -1594,7 +1602,6 @@
                 if (isDraggable) {
                     tile.draggable = true;
                     
-                    // Mouse events
                     tile.addEventListener('dragstart', (e) => {
                         if (this.gameState.currentPlayer !== this.playerNumber) {
                             e.preventDefault();
@@ -1605,7 +1612,6 @@
                     
                     tile.addEventListener('dragend', (e) => this.handleDragEnd(e, tile));
                     
-                    // Touch events for mobile
                     tile.addEventListener('touchstart', (e) => this.handleTouchStart(e, tile, letter), {passive: false});
                     tile.addEventListener('touchmove', (e) => this.handleTouchMove(e), {passive: false});
                     tile.addEventListener('touchend', (e) => this.handleTouchEnd(e), {passive: false});
@@ -1647,18 +1653,14 @@
                 if (!this.selectedTile) return;
                 if (this.gameState.currentPlayer !== this.playerNumber) return;
                 
-                // Check if cell is occupied in current state
                 if (this.gameState.board[row][col] !== null) return;
                 
-                // Check if we already placed a tile here this turn
                 if (this.placedTiles.find(pt => pt.row === row && pt.col === col)) return;
                 
-                // Create and place tile
                 const tile = this.createTileElement(this.selectedTile.letter, false);
                 tile.classList.add('placed');
                 this.board[row][col].element.appendChild(tile);
                 
-                // Track placement
                 this.placedTiles.push({
                     row, 
                     col, 
@@ -1667,7 +1669,6 @@
                     fromRack: this.selectedTile.fromRack
                 });
                 
-                // Remove from rack visually
                 if (this.selectedTile.fromRack) {
                     this.selectedTile.tile.style.opacity = '0.3';
                     this.selectedTile.tile.draggable = false;
@@ -1677,7 +1678,6 @@
                 this.selectedTile = null;
             }
 
-            // Touch handling for mobile
             handleTouchStart(e, tile, letter) {
                 if (this.gameState.currentPlayer !== this.playerNumber) return;
                 e.preventDefault();
@@ -1697,7 +1697,6 @@
                     y: touch.clientY - tile.getBoundingClientRect().top
                 };
                 
-                // Create floating tile
                 this.dragElement = tile.cloneNode(true);
                 this.dragElement.classList.add('dragging');
                 this.dragElement.style.position = 'fixed';
@@ -1718,7 +1717,6 @@
                 const touch = e.touches[0];
                 this.updateDragPosition(touch.clientX, touch.clientY);
                 
-                // Highlight cells under finger
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
                 if (element && element.classList.contains('cell')) {
                     element.style.transform = 'scale(1.1)';
@@ -1739,7 +1737,6 @@
                     this.handleDrop(row, col);
                 }
                 
-                // Cleanup
                 if (this.dragElement) {
                     this.dragElement.remove();
                     this.dragElement = null;
@@ -1776,7 +1773,6 @@
                     return;
                 }
 
-                // Validate alignment
                 const rows = this.placedTiles.map(pt => pt.row);
                 const cols = this.placedTiles.map(pt => pt.col);
                 const uniqueRows = [...new Set(rows)];
@@ -1792,8 +1788,6 @@
                     return;
                 }
 
-                // Check connectivity to existing tiles (simplified)
-                // In a full implementation, you'd check dictionary too
                 const isConnected = this.checkConnectivity();
                 if (!isConnected && !this.isFirstMove()) {
                     this.showToast('Word must connect to existing tiles!', 'error');
@@ -1801,7 +1795,6 @@
                     return;
                 }
 
-                // Calculate score
                 let score = 0;
                 let wordMultiplier = 1;
                 
@@ -1821,13 +1814,11 @@
                 score *= wordMultiplier;
                 if (this.placedTiles.length === 7) score += 50;
 
-                // Prepare updates
                 const newBoard = JSON.parse(JSON.stringify(this.gameState.board));
                 this.placedTiles.forEach(pt => {
                     newBoard[pt.row][pt.col] = pt.letter;
                 });
                 
-                // Draw new tiles
                 const currentRack = [...this.gameState.players[this.playerNumber].rack];
                 const usedIndices = this.placedTiles
                     .filter(pt => pt.fromRack)
@@ -1842,7 +1833,8 @@
                 const newTiles = this.drawTiles(this.gameState.tileBag, tilesNeeded);
                 const updatedRack = [...currentRack, ...newTiles];
                 
-                // Update Firebase
+                const playerName = this.gameState.players[this.playerNumber].name || ('Player ' + this.playerNumber);
+                
                 const updates = {
                     board: newBoard,
                     currentPlayer: this.playerNumber === 1 ? 2 : 1,
@@ -1856,7 +1848,7 @@
                         timestamp: Date.now()
                     },
                     log: [...this.gameState.log, {
-                        message: `Player ${this.playerNumber} scored ${score} points!`,
+                        message: playerName + ' scored ' + score + ' points!',
                         type: 'success',
                         timestamp: Date.now()
                     }]
@@ -1867,10 +1859,9 @@
                         this.placedTiles = [];
                         this.audio.playWordValid();
                         
-                        // Visual celebration
                         const cells = this.placedTiles.map(pt => this.board[pt.row][pt.col].element);
                         this.vfx.celebrateWord(cells);
-                        this.showToast(`Scored ${score} points!`, 'success');
+                        this.showToast('Scored ' + score + ' points!', 'success');
                     })
                     .catch(err => {
                         console.error('Update error:', err);
@@ -1879,7 +1870,6 @@
             }
 
             checkConnectivity() {
-                // Simplified: check if any placed tile touches existing tile
                 for (let pt of this.placedTiles) {
                     const neighbors = [
                         [pt.row - 1, pt.col], [pt.row + 1, pt.col],
@@ -1898,7 +1888,6 @@
             }
 
             isFirstMove() {
-                // Check if board is empty (only our tiles placed)
                 for (let row of this.gameState.board) {
                     for (let cell of row) {
                         if (cell !== null) return false;
@@ -1912,7 +1901,6 @@
                 const rackEl = document.getElementById('rack');
                 const tiles = Array.from(rackEl.children);
                 
-                // Fisher-Yates shuffle animation
                 for (let i = tiles.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     rackEl.appendChild(tiles[j]);
@@ -1927,16 +1915,14 @@
                 
                 this.audio.playTilePlace();
                 
-                // Remove placed tiles from board
                 this.placedTiles.forEach(pt => {
                     const cell = this.board[pt.row][pt.col].element;
                     const tile = cell.querySelector('.tile');
                     if (tile) tile.remove();
                 });
                 
-                // Restore rack tiles
                 this.placedTiles.filter(pt => pt.fromRack).forEach(pt => {
-                    const rackTile = document.querySelector(`#rack .tile[data-index="${pt.index}"]`);
+                    const rackTile = document.querySelector('#rack .tile[data-index="' + pt.index + '"]');
                     if (rackTile) {
                         rackTile.style.opacity = '1';
                         rackTile.draggable = true;
@@ -1950,7 +1936,6 @@
             skipTurn() {
                 this.audio.playTurnChange();
                 
-                // Recall tiles first
                 this.placedTiles.forEach(pt => {
                     const cell = this.board[pt.row][pt.col].element;
                     const tile = cell.querySelector('.tile');
@@ -1958,10 +1943,12 @@
                 });
                 this.placedTiles = [];
                 
+                const playerName = this.gameState.players[this.playerNumber].name || ('Player ' + this.playerNumber);
+                
                 const updates = {
                     currentPlayer: this.playerNumber === 1 ? 2 : 1,
                     log: [...this.gameState.log, {
-                        message: `Player ${this.playerNumber} skipped their turn`,
+                        message: playerName + ' skipped their turn',
                         type: 'info',
                         timestamp: Date.now()
                     }]
@@ -1972,12 +1959,10 @@
             }
 
             animateOpponentMove(moveData) {
-                // Animate opponent placing tiles one by one
                 moveData.tiles.forEach((pt, i) => {
                     setTimeout(() => {
                         const cell = this.board[pt.row][pt.col].element;
                         
-                        // Clear any existing
                         const existing = cell.querySelector('.tile');
                         if (existing) existing.remove();
                         
@@ -1989,7 +1974,6 @@
                     }, i * 150);
                 });
                 
-                // Celebration after all placed
                 setTimeout(() => {
                     this.audio.playWordValid();
                     const cells = moveData.tiles.map(pt => this.board[pt.row][pt.col].element);
@@ -2001,12 +1985,11 @@
                 const logEl = document.getElementById('gameLog');
                 const currentHtml = logEl.innerHTML;
                 
-                // Only update if changed
-                const newEntries = logEntries.slice(-20); // Keep last 20
+                const newEntries = logEntries.slice(-20);
                 const newHtml = newEntries.map(entry => 
-                    `<div class="log-entry ${entry.type}" data-time="${entry.timestamp}">
-                        [${new Date(entry.timestamp).toLocaleTimeString()}] ${entry.message}
-                    </div>`
+                    '<div class="log-entry ' + entry.type + '" data-time="' + entry.timestamp + '">' +
+                        '[' + new Date(entry.timestamp).toLocaleTimeString() + '] ' + entry.message +
+                    '</div>'
                 ).join('');
                 
                 if (currentHtml !== newHtml) {
@@ -2015,8 +1998,8 @@
                 }
             }
 
-            log(message, type = 'info') {
-                console.log(`[${type}] ${message}`);
+            log(message, type) {
+                console.log('[' + type + '] ' + message);
             }
 
             updateConnectionStatus(status, text) {
@@ -2029,7 +2012,7 @@
                 document.getElementById('connectionModal').classList.add('hidden');
             }
 
-            showToast(message, type = 'info') {
+            showToast(message, type) {
                 const toast = document.getElementById('toast');
                 toast.textContent = message;
                 toast.className = 'toast show ' + type;
@@ -2046,7 +2029,6 @@
                 navigator.clipboard.writeText(code).then(() => {
                     this.showToast('Room code copied!', 'success');
                 }).catch(() => {
-                    // Fallback
                     const input = document.createElement('input');
                     input.value = code;
                     document.body.appendChild(input);
@@ -2089,7 +2071,7 @@
             const rotateY = ((e.clientX - centerX) / window.innerWidth) * 10;
             const rotateX = 20 + ((e.clientY - centerY) / window.innerHeight) * 5;
             
-            board.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            board.style.transform = 'rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg)';
         });
     </script>
 </body>
